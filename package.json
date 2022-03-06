@@ -1,0 +1,23 @@
+{
+  "name": "githubwebhook-docker",
+  "version": "0.0.1",
+  "description": "A project to deploy node application automatically on server",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MathieuSchl/githubwebhook-docker.git"
+  },
+  "author": "CodyIsTheSenate",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MathieuSchl/githubwebhook-docker/issues"
+  },
+  "homepage": "https://github.com/MathieuSchl/githubwebhook-docker#readme",
+  "dependencies": {
+    "crypto": "^1.0.1",
+    "http": "^0.0.1-security"
+  }
+}

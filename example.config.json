@@ -1,0 +1,7 @@
+{
+    "webhook_secret": "MY_GITHUB_WEBHOOK_SECRET",
+    "github_repository_to_dir": {
+        "rwieruch/my-website-one-on-github": "/home/rwieruch/my-website-one",
+        "rwieruch/my-website-two-on-github": "/home/rwieruch/my-website-two"
+    }
+}
