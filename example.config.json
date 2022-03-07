@@ -1,7 +1,16 @@
 {
     "webhook_secret": "MY_GITHUB_WEBHOOK_SECRET",
-    "github_repository_to_dir": {
-        "rwieruch/my-website-one-on-github": "/home/rwieruch/my-website-one",
-        "rwieruch/my-website-two-on-github": "/home/rwieruch/my-website-two"
+    "port": 2224,
+    "github_repository": {
+        "name/my-website-one-on-github": {
+            "directory": "webSite",
+            "refs/heads/pushTest": {
+                "allowAllUsers": false,
+                "allowedUsersId": [],
+                "imageName": "webSite",
+                "buildCommand": "docker build -t webSite .",
+                "runCommand": "docker run -itd webSite sh"
+            }
+        }
     }
 }

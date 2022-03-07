@@ -5,7 +5,21 @@ const config = require('./config.json');
 
 const SECRET = config.webhook_secret;
 
-const GITHUB_REPOSITORIES_TO_DIR = config.github_repository_to_dir;
+const GITHUB_REPOSITORIES = config.github_repository;
+
+function execSh(command, callback) {
+    exec(command, function (err, stdout, stderr) {
+        if (err) {
+            console.log(err);
+            return;
+        }
+        if (stderr) {
+            console.log(stderr);
+            return;
+        }
+        callback(stdout);
+    });
+}
 
 http
     .createServer((req, res) => {
@@ -16,21 +30,36 @@ http
         .digest('hex')}`;
 
             const isAllowed = req.headers['x-hub-signature'] === signature;
+            console.log(isAllowed);
 
             const body = JSON.parse(chunk);
 
-            const isMaster = body ? body.ref === 'refs/heads/master' : null;
-            const directory = GITHUB_REPOSITORIES_TO_DIR[body ? body.repository ? body.repository.full_name : null : null];
+            const actualRepodata = GITHUB_REPOSITORIES[body ? body.repository ? body.repository.full_name : null : null];
+            if (!actualRepodata || !body) return;
+            const actualBranch = actualRepodata[body.req];
+            if (!actualBranch) return;
 
-            if (isAllowed && isMaster && directory) {
-                try {
-                    exec(`cd ${directory} && bash deploy.sh`);
-                } catch (error) {
-                    console.log(error);
-                }
+            if (!actualBranch.allowAllUsers) {
+                if (!actualBranch.allowedUsersId.includes(body.sender.id)) return;
+            }
+
+            const directory = "/home/" + actualRepodata.directory;
+            try {
+                execSh(`docker images | grep ${actualBranch.imageName}`, async (stdout) => {
+                    for (const image of stdout.split('\n')) {
+                        await new Promise((res) => {
+                            const imageTag = image.split(' ')[2];
+                            console.log(imageTag);
+                            res();
+                        })
+                    }
+                    console.log(stdout);
+                })
+            } catch (error) {
+                console.log(error);
             }
         });
 
         res.end();
     })
-    .listen(8080);
+    .listen(config.port);
