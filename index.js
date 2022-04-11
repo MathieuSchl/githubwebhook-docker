@@ -7,14 +7,16 @@ const SECRET = config.webhook_secret;
 
 const GITHUB_REPOSITORIES = config.github_repository;
 
-function execSh(command, activeErr, callback) {
+function execSh(command, activeErr, ignoreErr, callback) {
     exec(command, function (err, stdout, stderr) {
         if (activeErr && err) {
-            console.log(err);
+            if (ignoreErr) callback(stdout);
+            else console.log(err);
             return;
         }
         if (activeErr && stderr) {
-            console.log(stderr);
+            if (ignoreErr) callback(stdout);
+            else console.log(stderr);
             return;
         }
         callback(stdout);
@@ -35,7 +37,6 @@ http
 
             const actualRepodata = GITHUB_REPOSITORIES[body ? body.repository ? body.repository.full_name : null : null];
             if (!isAllowed || !actualRepodata || !body) return;
-            console.log(body);
             const actualBranch = actualRepodata[body.ref];
             if (!actualBranch) return;
 
@@ -43,29 +44,39 @@ http
                 if (!actualBranch.allowedUsersId.includes(body.sender.id)) return;
             }
 
-            const directory = "/home/github-webhook/projects/" + actualRepodata.directory;
+            const projectName = actualRepodata.directory;
+
+            const directory = "/home/github-webhook/projects/" + projectName;
+            const branchName = body.ref.split("/")[body.ref.split("/").length - 1];
+            console.log(`Project : ${projectName} Branch : ${branchName} update detected`);
             try {
-                execSh(`cd ${directory} && git fetch`, false, async (stdout) => {
-                    execSh(`cd ${directory} && git checkout ${body.ref.split("/")[body.ref.split("/").length - 1]}`, false, async (stdout) => {
-                        execSh(`cd ${directory} && git pull`, false, async (stdout) => {
-                            execSh(`cd ${directory} && ${actualBranch.buildCommand}`, true, async (stdout) => {
-                                console.log(stdout);
-                                execSh(`docker images | grep "<none>"`, false, async (stdout) => {
-                                    for (const image of stdout.split('\n')) {
-                                        await new Promise((res) => {
-                                            const imageTag = image.split(' ').filter(word => word !== "")[2];
-                                            if (imageTag == null) {
-                                                res();
-                                                return;
-                                            } else {
-                                                execSh(`docker image rm ${imageTag}`, true, async (stdout) => {
+                console.log(`${projectName} : git fetch`);
+                execSh(`cd ${directory} && git fetch`, false, false, async (stdout) => {
+                    console.log(`${projectName} : git checkout`);
+                    execSh(`cd ${directory} && git checkout ${branchName}`, false, false, async (stdout) => {
+                        console.log(`${projectName} : git pull`);
+                        execSh(`cd ${directory} && git pull`, false, false, async (stdout) => {
+                            console.log(`${projectName} : docker build`);
+                            execSh(`cd ${directory} && ${actualBranch.buildCommand}`, true, false, async (stdout) => {
+                                console.log(`${projectName} : docker rm ${actualBranch.imageName}`);
+                                execSh(`docker rm -f ${actualBranch.conatinerName}`, true, false, async (stdout) => {
+                                    execSh(`docker images | grep "<none>"`, false, false, async (stdout) => {
+                                        for (const image of stdout.split('\n')) {
+                                            await new Promise((res) => {
+                                                const imageTag = image.split(' ').filter(word => word !== "")[2];
+                                                if (imageTag == null) {
                                                     res();
-                                                })
-                                            }
+                                                    return;
+                                                } else {
+                                                    execSh(`docker image rm ${imageTag}`, true, true, async (stdout) => {
+                                                        res();
+                                                    })
+                                                }
+                                            })
+                                        }
+                                        execSh(`cd ${directory} && ${actualBranch.runCommand}`, true, false, async (stdout) => {
+                                            console.log(`Container '${actualBranch.conatinerName}' is now updated`);
                                         })
-                                    }
-                                    execSh(`cd ${directory} && ${actualBranch.runCommand}`, true, async (stdout) => {
-                                        console.log(`Container '${actualBranch.myfab_back}' is now updated`);
                                     })
                                 })
                             })
@@ -80,3 +91,5 @@ http
         res.end();
     })
     .listen(config.port);
+
+console.log("Port " + config.port + " is now listened");
