@@ -1,7 +1,6 @@
 FROM alpine
 
-RUN apk add docker
-RUN apk add nodejs npm git
+RUN apk add docker nodejs npm git
 
 RUN mkdir /home/github-webhook
 RUN mkdir /home/github-webhook/projects

@@ -1,11 +1,32 @@
 const http = require('http');
 const crypto = require('crypto');
 const exec = require('child_process').exec;
+var CronJob = require('cron').CronJob;
 const config = require('./config.json');
 
 const SECRET = config.webhook_secret;
 
 const GITHUB_REPOSITORIES = config.github_repository;
+
+
+async function startCron(){
+    for(let index = 0; index < config.cron.length; index++){
+        const element = config.cron[index];
+        try {
+            console.log("Start Job\nCron : '" + element.cron + "'\nCmd : " + element.cmd);
+            new CronJob(element.cron, async function() {
+                await new Promise((res) => {
+                    execSh(element.cmd, true, false, async (stdout) => {
+                        if(stdout && stdout !== "") console.log(stdout);
+                        res();
+                    })
+                })
+            }, null, true);
+        } catch (error) {
+            console.log(error);
+        }
+    }
+}
 
 function execSh(command, activeErr, ignoreErr, callback) {
     exec(command, function (err, stdout, stderr) {
@@ -23,6 +44,7 @@ function execSh(command, activeErr, ignoreErr, callback) {
     });
 }
 
+startCron();
 http
     .createServer((req, res) => {
         req.on('data', chunk => {
