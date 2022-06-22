@@ -10,7 +10,7 @@ const GITHUB_REPOSITORIES = config.github_repository;
 
 
 async function startCron() {
-    if(!config.cron) return;
+    if (!config.cron) return;
     for (let index = 0; index < config.cron.length; index++) {
         const element = config.cron[index];
         try {
@@ -46,6 +46,7 @@ function execSh(command, activeErr, ignoreErr, callback) {
 }
 
 module.exports.runProcess = runProcess;
+
 function runProcess(actualRepodata, branchName) {
     const projectName = actualRepodata.directory;
     const directory = "/home/github-webhook/projects/" + actualRepodata.directory;
@@ -120,37 +121,41 @@ function runProcess(actualRepodata, branchName) {
     }
 }
 
-startCron();
-http
-    .createServer((req, res) => {
-        req.on('data', chunk => {
-            const signature = `sha1=${crypto
+function start() {
+    startCron();
+    http
+        .createServer((req, res) => {
+            req.on('data', chunk => {
+                const signature = `sha1=${crypto
         .createHmac('sha1', SECRET)
         .update(chunk)
         .digest('hex')}`;
 
-            //secret verification
-            const isAllowed = req.headers['x-hub-signature'] === signature;
+                //secret verification
+                const isAllowed = req.headers['x-hub-signature'] === signature;
 
-            const body = JSON.parse(chunk);
+                const body = JSON.parse(chunk);
 
-            //project verification
-            const actualRepodata = GITHUB_REPOSITORIES[body ? body.repository ? body.repository.full_name : null : null];
-            if (!isAllowed || !actualRepodata || !body) return;
-            const actualBranch = actualRepodata[body.ref];
-            if (!actualBranch) return;
+                //project verification
+                const actualRepodata = GITHUB_REPOSITORIES[body ? body.repository ? body.repository.full_name : null : null];
+                if (!isAllowed || !actualRepodata || !body) return;
+                const actualBranch = actualRepodata[body.ref];
+                if (!actualBranch) return;
 
-            //user verification
-            if (!actualBranch.allowAllUsers) {
-                if (!actualBranch.allowedUsersId.includes(body.sender.id)) return;
-            }
+                //user verification
+                if (!actualBranch.allowAllUsers) {
+                    if (!actualBranch.allowedUsersId.includes(body.sender.id)) return;
+                }
 
-            const branchName = body.ref.split("/")[body.ref.split("/").length - 1];
-            runProcess(projectName, branchName);
-        });
+                const branchName = body.ref.split("/")[body.ref.split("/").length - 1];
+                runProcess(projectName, branchName);
+            });
 
-        res.end();
-    })
-    .listen(config.port);
+            res.end();
+        })
+        .listen(config.port);
 
-console.log("Port " + config.port + " is now listened");
+    console.log("Port " + config.port + " is now listened");
+}
+
+if(process.argv[2] === "start") start();
