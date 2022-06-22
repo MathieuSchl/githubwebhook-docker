@@ -10,6 +10,7 @@ const GITHUB_REPOSITORIES = config.github_repository;
 
 
 async function startCron() {
+    if(!config.cron) return;
     for (let index = 0; index < config.cron.length; index++) {
         const element = config.cron[index];
         try {
