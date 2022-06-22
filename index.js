@@ -47,7 +47,7 @@ function execSh(command, activeErr, ignoreErr, callback) {
 
 module.exports.runProcess = runProcess;
 
-function runProcess(actualRepodata, branchName) {
+function runProcess(actualRepodata, branchName, actualBranch) {
     const projectName = actualRepodata.directory;
     const directory = "/home/github-webhook/projects/" + actualRepodata.directory;
     const pathToDockerCompose = actualRepodata.directoryComoseYml ? "/home/github-webhook/projects/" + actualRepodata.directoryComoseYml : directory;
@@ -148,7 +148,7 @@ function start() {
                 }
 
                 const branchName = body.ref.split("/")[body.ref.split("/").length - 1];
-                runProcess(projectName, branchName);
+                runProcess(projectName, branchName, actualBranch);
             });
 
             res.end();

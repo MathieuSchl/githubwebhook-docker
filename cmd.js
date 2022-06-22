@@ -25,7 +25,8 @@ if (process.argv[2] === "help") {
         return;
     }
     const actualRepodata = config.github_repository[repo];
-    require("./index").runProcess(actualRepodata, branch);
+    const actualBranch = actualRepodata[branch];
+    require("./index").runProcess(actualRepodata, branch, actualBranch);
 } else {
     console.log("To run this command:\nIf you need help:\nnode cmd help\nIf you want to reload an image:\n-node cmd [repo name] [branch name]");
 }
