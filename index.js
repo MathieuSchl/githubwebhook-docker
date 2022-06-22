@@ -48,8 +48,8 @@ function execSh(command, activeErr, ignoreErr, callback) {
 module.exports.runProcess = runProcess;
 function runProcess(actualRepodata, branchName) {
     const projectName = actualRepodata.directory;
-    const pathToDockerCompose = actualRepodata.directoryComoseYml ? "/home/github-webhook/projects/" + actualRepodata.directoryComoseYml : directory;
     const directory = "/home/github-webhook/projects/" + actualRepodata.directory;
+    const pathToDockerCompose = actualRepodata.directoryComoseYml ? "/home/github-webhook/projects/" + actualRepodata.directoryComoseYml : directory;
     console.log(`Project : ${projectName} Branch : ${branchName} update detected`);
     try {
         //Pull modification from git
