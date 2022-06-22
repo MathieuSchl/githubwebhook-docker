@@ -54,13 +54,13 @@ function runProcess(actualRepodata, branchName, actualBranch) {
     console.log(`Project : ${projectName} Branch : ${branchName} update detected`);
     try {
         //Pull modification from git
-        execSh(`cd ${directory} && git config --global --add safe.directory ${directory}`, false, false, async (stdout) => {
+        execSh(`cd ${directory} && git config --global --add safe.directory ${directory}`, true, false, async (stdout) => {
             console.log(`${projectName} : git fetch`);
-            execSh(`cd ${directory} && git fetch`, false, false, async (stdout) => {
+            execSh(`cd ${directory} && git fetch`, true, false, async (stdout) => {
                 console.log(`${projectName} : git checkout`);
-                execSh(`cd ${directory} && git checkout ${branchName}`, false, false, async (stdout) => {
+                execSh(`cd ${directory} && git checkout ${branchName}`, true, false, async (stdout) => {
                     console.log(`${projectName} : git pull`);
-                    execSh(`cd ${directory} && git pull`, false, false, async (stdout) => {
+                    execSh(`cd ${directory} && git pull`, true, false, async (stdout) => {
 
 
                         if (!actualRepodata.isDockerCompose) {
@@ -69,6 +69,7 @@ function runProcess(actualRepodata, branchName, actualBranch) {
                             execSh(`cd ${directory} && ${actualBranch.buildCommand}`, true, false, async (stdout) => {
                                 console.log(`${projectName} : docker rm ${actualBranch.imageName}`);
                                 execSh(`docker rm -f ${actualBranch.conatinerName}`, true, false, async (stdout) => {
+                                    console.log(`Remove unused images`);
                                     execSh(`docker images | grep "<none>"`, false, false, async (stdout) => {
                                         for (const image of stdout.split('\n')) {
                                             await new Promise((res) => {
@@ -91,8 +92,11 @@ function runProcess(actualRepodata, branchName, actualBranch) {
                             })
                         } else {
                             //create new image and start new container with docker-compose command
+                            console.log(`${projectName} : docker-compose build`);
                             execSh(`cd ${pathToDockerCompose} && docker-compose build ${actualBranch.serviceName}`, true, true, async (stdout) => {
+                                console.log(`docker-compose : stop service ${actualBranch.serviceName}`);
                                 execSh(`cd ${pathToDockerCompose} && docker-compose rm -sf ${actualBranch.serviceName}`, true, true, async (stdout) => {
+                                    console.log(`Remove unused images`);
                                     execSh(`docker images | grep "<none>"`, false, false, async (stdout) => {
                                         for (const image of stdout.split('\n')) {
                                             await new Promise((res) => {
@@ -107,6 +111,7 @@ function runProcess(actualRepodata, branchName, actualBranch) {
                                                 }
                                             })
                                         }
+                                        console.log(`docker-compose : start service ${actualBranch.serviceName}`);
                                         execSh(`cd ${pathToDockerCompose} && docker-compose up -d ${actualBranch.serviceName}`, true, false, async (stdout) => {
                                             console.log(`Container '${actualBranch.conatinerName}' is now updated`);
                                         })
