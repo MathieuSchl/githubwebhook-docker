@@ -44,6 +44,81 @@ function execSh(command, activeErr, ignoreErr, callback) {
     });
 }
 
+module.exports.runProcess = runProcess;
+function runProcess(actualRepodata, branchName) {
+    const projectName = actualRepodata.directory;
+    const pathToDockerCompose = actualRepodata.directoryComoseYml ? "/home/github-webhook/projects/" + actualRepodata.directoryComoseYml : directory;
+    const directory = "/home/github-webhook/projects/" + actualRepodata.directory;
+    console.log(`Project : ${projectName} Branch : ${branchName} update detected`);
+    try {
+        //Pull modification from git
+        console.log(`${projectName} : git fetch`);
+        execSh(`cd ${directory} && git fetch`, false, false, async (stdout) => {
+            console.log(`${projectName} : git checkout`);
+            execSh(`cd ${directory} && git checkout ${branchName}`, false, false, async (stdout) => {
+                console.log(`${projectName} : git pull`);
+                execSh(`cd ${directory} && git pull`, false, false, async (stdout) => {
+
+
+                    if (!actualRepodata.isDockerCompose) {
+                        //create new image and start new container with docker command
+                        console.log(`${projectName} : docker build`);
+                        execSh(`cd ${directory} && ${actualBranch.buildCommand}`, true, false, async (stdout) => {
+                            console.log(`${projectName} : docker rm ${actualBranch.imageName}`);
+                            execSh(`docker rm -f ${actualBranch.conatinerName}`, true, false, async (stdout) => {
+                                execSh(`docker images | grep "<none>"`, false, false, async (stdout) => {
+                                    for (const image of stdout.split('\n')) {
+                                        await new Promise((res) => {
+                                            const imageTag = image.split(' ').filter(word => word !== "")[2];
+                                            if (imageTag == null) {
+                                                res();
+                                                return;
+                                            } else {
+                                                execSh(`docker image rm ${imageTag}`, true, true, async (stdout) => {
+                                                    res();
+                                                })
+                                            }
+                                        })
+                                    }
+                                    execSh(`cd ${directory} && ${actualBranch.runCommand}`, true, false, async (stdout) => {
+                                        console.log(`Container '${actualBranch.conatinerName}' is now updated`);
+                                    })
+                                })
+                            })
+                        })
+                    } else {
+                        //create new image and start new container with docker-compose command
+                        execSh(`cd ${pathToDockerCompose} && docker-compose build ${actualBranch.serviceName}`, true, true, async (stdout) => {
+                            execSh(`cd ${pathToDockerCompose} && docker-compose rm -sf ${actualBranch.serviceName}`, true, true, async (stdout) => {
+                                execSh(`docker images | grep "<none>"`, false, false, async (stdout) => {
+                                    for (const image of stdout.split('\n')) {
+                                        await new Promise((res) => {
+                                            const imageTag = image.split(' ').filter(word => word !== "")[2];
+                                            if (imageTag == null) {
+                                                res();
+                                                return;
+                                            } else {
+                                                execSh(`docker image rm ${imageTag}`, true, true, async (stdout) => {
+                                                    res();
+                                                })
+                                            }
+                                        })
+                                    }
+                                    execSh(`cd ${pathToDockerCompose} && docker-compose up -d ${actualBranch.serviceName}`, true, false, async (stdout) => {
+                                        console.log(`Container '${actualBranch.conatinerName}' is now updated`);
+                                    })
+                                })
+                            })
+                        })
+                    }
+                })
+            })
+        })
+    } catch (error) {
+        console.log(error);
+    }
+}
+
 startCron();
 http
     .createServer((req, res) => {
@@ -69,78 +144,8 @@ http
                 if (!actualBranch.allowedUsersId.includes(body.sender.id)) return;
             }
 
-            const projectName = actualRepodata.directory;
-            const directory = "/home/github-webhook/projects/" + actualRepodata.directory;
-            const pathToDockerCompose = actualRepodata.directoryComoseYml ? "/home/github-webhook/projects/" + actualRepodata.directoryComoseYml : directory;
             const branchName = body.ref.split("/")[body.ref.split("/").length - 1];
-            console.log(`Project : ${projectName} Branch : ${branchName} update detected`);
-            try {
-                //Pull modification from git
-                console.log(`${projectName} : git fetch`);
-                execSh(`cd ${directory} && git fetch`, false, false, async (stdout) => {
-                    console.log(`${projectName} : git checkout`);
-                    execSh(`cd ${directory} && git checkout ${branchName}`, false, false, async (stdout) => {
-                        console.log(`${projectName} : git pull`);
-                        execSh(`cd ${directory} && git pull`, false, false, async (stdout) => {
-
-
-                            if (!actualRepodata.isDockerCompose) {
-                                //create new image and start new container with docker command
-                                console.log(`${projectName} : docker build`);
-                                execSh(`cd ${directory} && ${actualBranch.buildCommand}`, true, false, async (stdout) => {
-                                    console.log(`${projectName} : docker rm ${actualBranch.imageName}`);
-                                    execSh(`docker rm -f ${actualBranch.conatinerName}`, true, false, async (stdout) => {
-                                        execSh(`docker images | grep "<none>"`, false, false, async (stdout) => {
-                                            for (const image of stdout.split('\n')) {
-                                                await new Promise((res) => {
-                                                    const imageTag = image.split(' ').filter(word => word !== "")[2];
-                                                    if (imageTag == null) {
-                                                        res();
-                                                        return;
-                                                    } else {
-                                                        execSh(`docker image rm ${imageTag}`, true, true, async (stdout) => {
-                                                            res();
-                                                        })
-                                                    }
-                                                })
-                                            }
-                                            execSh(`cd ${directory} && ${actualBranch.runCommand}`, true, false, async (stdout) => {
-                                                console.log(`Container '${actualBranch.conatinerName}' is now updated`);
-                                            })
-                                        })
-                                    })
-                                })
-                            } else {
-                                //create new image and start new container with docker-compose command
-                                execSh(`cd ${pathToDockerCompose} && docker-compose build ${actualBranch.serviceName}`, true, true, async (stdout) => {
-                                    execSh(`cd ${pathToDockerCompose} && docker-compose rm -sf ${actualBranch.serviceName}`, true, true, async (stdout) => {
-                                        execSh(`docker images | grep "<none>"`, false, false, async (stdout) => {
-                                            for (const image of stdout.split('\n')) {
-                                                await new Promise((res) => {
-                                                    const imageTag = image.split(' ').filter(word => word !== "")[2];
-                                                    if (imageTag == null) {
-                                                        res();
-                                                        return;
-                                                    } else {
-                                                        execSh(`docker image rm ${imageTag}`, true, true, async (stdout) => {
-                                                            res();
-                                                        })
-                                                    }
-                                                })
-                                            }
-                                            execSh(`cd ${pathToDockerCompose} && docker-compose up -d ${actualBranch.serviceName}`, true, false, async (stdout) => {
-                                                console.log(`Container '${actualBranch.conatinerName}' is now updated`);
-                                            })
-                                        })
-                                    })
-                                })
-                            }
-                        })
-                    })
-                })
-            } catch (error) {
-                console.log(error);
-            }
+            runProcess(projectName, branchName);
         });
 
         res.end();
