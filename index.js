@@ -159,7 +159,7 @@ function start() {
                 }
 
                 const branchName = body.ref.split("/")[body.ref.split("/").length - 1];
-                runProcess(projectName, branchName, actualBranch);
+                runProcess(actualRepodata, branchName, actualBranch);
             });
 
             res.end();
