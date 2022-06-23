@@ -47,18 +47,18 @@ function execSh(command, activeErr, ignoreErr, callback) {
 
 module.exports.runProcess = runProcess;
 
-function runProcess(actualRepodata, branchName, actualBranch) {
+function runProcess(actualRepodata, branchFullName, actualBranch) {
     const projectName = actualRepodata.directory;
     const directory = "/home/github-webhook/projects/" + actualRepodata.directory;
     const pathToDockerCompose = actualRepodata.directoryComoseYml ? "/home/github-webhook/projects/" + actualRepodata.directoryComoseYml : directory;
-    console.log(`Project : ${projectName} Branch : ${branchName} update detected`);
+    console.log(`Project : ${projectName} Branch : ${branchFullName} update detected`);
     try {
         //Pull modification from git
         execSh(`cd ${directory} && git config --global --add safe.directory ${directory}`, true, false, async (stdout) => {
             console.log(`${projectName} : git fetch`);
             execSh(`cd ${directory} && git fetch`, true, false, async (stdout) => {
                 console.log(`${projectName} : git checkout`);
-                execSh(`cd ${directory} && git checkout ${branchName}`, true, false, async (stdout) => {
+                execSh(`cd ${directory} && git checkout ${actualBranch.branchName}`, true, false, async (stdout) => {
                     console.log(`${projectName} : git pull`);
                     execSh(`cd ${directory} && git pull`, true, false, async (stdout) => {
 
