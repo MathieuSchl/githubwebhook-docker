@@ -1,0 +1,13 @@
+version: "3"
+
+services:
+  github-webhook:
+    build: .
+    restart: always
+    container_name: github-webhook
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Put below the links of your projects. Projects folders must be in /home/github-webhook/projects/ to work (in the container)
+      - /yourPath/YourProject:/home/github-webhook/projects/YourProject
+    ports:
+      - 2224:2224
