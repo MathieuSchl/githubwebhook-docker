@@ -8,6 +8,10 @@ const SECRET = config.webhook_secret;
 
 const GITHUB_REPOSITORIES = config.github_repository;
 
+function getTimeStamp() {
+    const actualDate = new Date();
+    return `[${actualDate.getDate()}/${actualDate.getMonth()}/${actualDate.getFullYear()} ${actualDate.getHours()}:${actualDate.getMinutes()}]`;
+}
 
 async function startCron() {
     if (!config.cron) return;
@@ -51,25 +55,25 @@ function runProcess(actualRepodata, branchFullName, actualBranch) {
     const projectName = actualRepodata.directory;
     const directory = "/home/github-webhook/projects/" + actualRepodata.directory;
     const pathToDockerCompose = actualRepodata.directoryComoseYml ? "/home/github-webhook/projects/" + actualRepodata.directoryComoseYml : directory;
-    console.log(`Project : ${projectName} Branch : ${branchFullName} update detected`);
+    console.log(getTimeStamp() + `Project : ${projectName} Branch : ${branchFullName} update detected`);
     try {
         //Pull modification from git
-        execSh(`cd ${directory} && git config --global --add safe.directory ${directory}`, true, false, async (stdout) => {
-            console.log(`${projectName} : git fetch`);
-            execSh(`cd ${directory} && git fetch`, true, false, async (stdout) => {
-                console.log(`${projectName} : git checkout`);
-                execSh(`cd ${directory} && git checkout ${actualBranch.branchName}`, true, false, async (stdout) => {
-                    console.log(`${projectName} : git pull`);
-                    execSh(`cd ${directory} && git pull`, true, false, async (stdout) => {
+        execSh(`cd ${directory} && git config --global --add safe.directory ${directory}`, false, false, async (stdout) => {
+            console.log(getTimeStamp() + `${projectName} : git fetch`);
+            execSh(`cd ${directory} && git fetch`, false, false, async (stdout) => {
+                console.log(getTimeStamp() + `${projectName} : git checkout`);
+                execSh(`cd ${directory} && git checkout ${actualBranch.branchName}`, false, false, async (stdout) => {
+                    console.log(getTimeStamp() + `${projectName} : git pull`);
+                    execSh(`cd ${directory} && git pull`, false, false, async (stdout) => {
 
 
                         if (!actualRepodata.isDockerCompose) {
                             //create new image and start new container with docker command
-                            console.log(`${projectName} : docker build`);
+                            console.log(getTimeStamp() + `${projectName} : docker build`);
                             execSh(`cd ${directory} && ${actualBranch.buildCommand}`, true, false, async (stdout) => {
-                                console.log(`${projectName} : docker rm ${actualBranch.imageName}`);
+                                console.log(getTimeStamp() + `${projectName} : docker rm ${actualBranch.imageName}`);
                                 execSh(`docker rm -f ${actualBranch.conatinerName}`, true, false, async (stdout) => {
-                                    console.log(`Remove unused images`);
+                                    console.log(getTimeStamp() + `Remove unused images`);
                                     execSh(`docker images | grep "<none>"`, false, false, async (stdout) => {
                                         for (const image of stdout.split('\n')) {
                                             await new Promise((res) => {
@@ -84,7 +88,7 @@ function runProcess(actualRepodata, branchFullName, actualBranch) {
                                                 }
                                             })
                                         }
-                                        execSh(`cd ${directory} && ${actualBranch.runCommand}`, true, false, async (stdout) => {
+                                        execSh(getTimeStamp() + `cd ${directory} && ${actualBranch.runCommand}`, true, false, async (stdout) => {
                                             console.log(`Container '${actualBranch.conatinerName}' is now updated`);
                                         })
                                     })
@@ -92,11 +96,11 @@ function runProcess(actualRepodata, branchFullName, actualBranch) {
                             })
                         } else {
                             //create new image and start new container with docker-compose command
-                            console.log(`${projectName} : docker-compose build`);
+                            console.log(getTimeStamp() + `${projectName} : docker-compose build`);
                             execSh(`cd ${pathToDockerCompose} && docker-compose build ${actualBranch.serviceName}`, true, true, async (stdout) => {
-                                console.log(`docker-compose : stop service ${actualBranch.serviceName}`);
+                                console.log(getTimeStamp() + `docker-compose : stop service ${actualBranch.serviceName}`);
                                 execSh(`cd ${pathToDockerCompose} && docker-compose rm -sf ${actualBranch.serviceName}`, true, true, async (stdout) => {
-                                    console.log(`Remove unused images`);
+                                    console.log(getTimeStamp() + `Remove unused images`);
                                     execSh(`docker images | grep "<none>"`, false, false, async (stdout) => {
                                         for (const image of stdout.split('\n')) {
                                             await new Promise((res) => {
@@ -111,9 +115,9 @@ function runProcess(actualRepodata, branchFullName, actualBranch) {
                                                 }
                                             })
                                         }
-                                        console.log(`docker-compose : start service ${actualBranch.serviceName}`);
+                                        console.log(getTimeStamp() + `docker-compose : start service ${actualBranch.serviceName}`);
                                         execSh(`cd ${pathToDockerCompose} && docker-compose up -d ${actualBranch.serviceName}`, true, false, async (stdout) => {
-                                            console.log(`Container '${actualBranch.conatinerName}' is now updated`);
+                                            console.log(getTimeStamp() + `Container '${actualBranch.conatinerName}' is now updated`);
                                         })
                                     })
                                 })
