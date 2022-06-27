@@ -167,6 +167,7 @@ function start() {
         .listen(config.port);
 
     console.log("Port " + config.port + " is now listened");
+    console.log("System start at " + new Date());
 }
 
 if (process.argv[2] === "start") start();
